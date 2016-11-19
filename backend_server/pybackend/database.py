@@ -51,6 +51,10 @@ class LocalClient():
         if key in self._collection:
             self._collection.pop(key)
 
+    def keys(self):
+        """Returns an iterator over the keys in the Client."""
+        return self._collection.keys()
+
 
 class GClient(object):
     """Thin wrapper for gcloud's DataStore client"""
@@ -74,6 +78,12 @@ class GClient(object):
         entity = datastore.Entity(key, exclude_from_indexes=[])
         entity.update(record)
         self._client.put(entity)
+
+    def keys(self):
+        raise NotImplementedError("Placeholder, needs revisiting.")
+        query = self._client.query()
+        query.keys_only()
+        return query.fetch()
 
 
 BACKENDS = {

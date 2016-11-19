@@ -199,15 +199,21 @@ def next_task():
 
     $ curl -X GET localhost:8080/task
     """
-    urls = ["/static/wav/paris.wav",
-            "/static/wav/spectrogram_demo_doorknock_mono.wav"]
+    audio_url = "http://localhost:8080/audio/{}"
+
+    db = pybackend.database.Database(
+        project_id=app.config['cloud']['project_id'],
+        **app.config['cloud']['database'])
+
+    random_uri = random.choice(list(db.keys()))
+
     task = dict(feedback="none",
                 visualization='spectrogram',
                 proximityTag=[],
                 annotationTag=get_taxonomy(),
-                url=random.choice(urls),
-                numRecordings=10,
-                recordingIndex=random.randint(0, 10),
+                url=audio_url.format(random_uri),
+                numRecordings='?',
+                recordingIndex=random_uri,
                 tutorialVideoURL="https://www.youtube.com/embed/Bg8-83heFRM",
                 alwaysShowTags=True)
     resp = Response(json.dumps(dict(task=task)))
