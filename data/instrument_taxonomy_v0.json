@@ -1,0 +1,34 @@
+{"tag_open_mic_instruments":
+    {
+        "value": {
+            "enum": [
+                "accordion",
+                "banjo",
+                "bass",
+                "cello",
+                "clarinet",
+                "cymbals",
+                "drums",
+                "flute",
+                "guitar",
+                "harmonica",
+                "harp",
+                "harpsichord",
+                "mallet percusion",
+                "mandolin",
+                "oboe",
+                "organ",
+                "piano",
+                "saxophone",
+                "synthesizer",
+                "trombone",
+                "trumpet",
+                "ukulele"
+                "violin",
+                "vocals"
+            ]
+        },
+        "dense": false,
+        "description": "Open-Mic Instrument Taxonomy -- v0"
+    }
+}
