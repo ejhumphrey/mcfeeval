@@ -79,5 +79,22 @@ def test_LocalClient_append(json_file):
     assert db.get(key2) == rec2
 
 
+@pytest.fixture()
+def sample_client(json_file):
+    key = 'a'
+    exp_rec = dict(x=1, y='13')
+    collec = {key: exp_rec}
+    with open(json_file, 'w') as fp:
+        json.dump(collec, fp)
+
+    return D.LocalClient('my-project', filepath=json_file, mode=D.READ)
+
+
+def test_LocalClient_keys(sample_client):
+    keys = list(sample_client.keys())
+    assert len(keys) == 1
+    assert sample_client.get(keys[0]) == dict(x=1, y='13')
+
+
 def test_GClient___init__():
     assert D.GClient('my-proj')
