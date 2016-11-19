@@ -147,7 +147,8 @@ def annotation_submit():
     if request.headers['Content-Type'] == 'application/json':
         app.logger.info("Received Annotation:\n{}"
                         .format(json.dumps(request.json, indent=2)))
-        # obj = json.loads(request.data)
+        # Do a thing with the annotation
+        # obj = request.json
         data = json.dumps(dict(message='Success!'))
         status = 200
 
@@ -163,13 +164,13 @@ def annotation_submit():
 
 
 def get_taxonomy():
-    tax_url = ("https://raw.githubusercontent.com/marl/jams/master/jams/"
-               "schemata/namespaces/tag/medleydb_instruments.json")
+    tax_url = ("https://raw.githubusercontent.com/cosmir/open-mic/"
+               "ejh_20161119_iss8_webannot/data/instrument_taxonomy_v0.json")
     res = requests.get(tax_url)
     values = []
     try:
         schema = res.json()
-        values = schema['tag_medleydb_instruments']['value']['enum']
+        values = schema['tag_open_mic_instruments']['value']['enum']
     except BaseException as derp:
         app.logger.error("Failed loading taxonomy: {}".format(derp))
 
