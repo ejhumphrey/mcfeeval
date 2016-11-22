@@ -5,9 +5,14 @@
         "backend": "local",
         "local_dir": "tmp"
     },
-    "database": {
+    "audio-db": {
         "backend": "local",
         "filepath": "tmp/database-file.json",
+        "mode": "a"
+    },
+    "annotation-db": {
+        "backend": "local",
+        "filepath": "tmp/annot-database-file.json",
         "mode": "a"
     }
 }

@@ -84,7 +84,7 @@ def audio_upload():
     # Keep things like extension, storage platform, mimetype, etc.
     dbase = pybackend.database.Database(
         project_id=app.config['cloud']['project_id'],
-        **app.config['cloud']['database'])
+        **app.config['cloud']['audio-db'])
     record = dict(filepath=filepath,
                   created=str(datetime.datetime.now()))
     dbase.put(uri, record)
@@ -108,7 +108,7 @@ def audio_download(uri):
 
     dbase = pybackend.database.Database(
         project_id=app.config['cloud']['project_id'],
-        **app.config['cloud']['database'])
+        **app.config['cloud']['audio-db'])
 
     entity = dbase.get(uri)
     if entity is None:
@@ -148,10 +148,16 @@ def annotation_submit():
         app.logger.info("Received Annotation:\n{}"
                         .format(json.dumps(request.json, indent=2)))
         # Do a thing with the annotation
-        # obj = request.json
+        # Return some progress stats?
         data = json.dumps(dict(message='Success!'))
         status = 200
 
+        db = pybackend.database.Database(
+            project_id=app.config['cloud']['project_id'],
+            **app.config['cloud']['annotation-db'])
+        uri = str(pybackend.utils.uuid(json.dumps(request.json)))
+        record = dict(created=str(datetime.datetime.now()), **request.json)
+        db.put(uri, record)
     else:
         status = 400
         data = json.dumps(dict(message='Invalid Content-Type; '
@@ -203,7 +209,7 @@ def next_task():
 
     db = pybackend.database.Database(
         project_id=app.config['cloud']['project_id'],
-        **app.config['cloud']['database'])
+        **app.config['cloud']['audio-db'])
 
     random_uri = random.choice(list(db.keys()))
 
@@ -216,7 +222,9 @@ def next_task():
                 recordingIndex=random_uri,
                 tutorialVideoURL="https://www.youtube.com/embed/Bg8-83heFRM",
                 alwaysShowTags=True)
-    resp = Response(json.dumps(dict(task=task)))
+    data = json.dumps(dict(task=task))
+    app.logger.debug("Returning:\n{}".format(data))
+    resp = Response(data)
     resp.headers['Link'] = SOURCE
     return resp
 
