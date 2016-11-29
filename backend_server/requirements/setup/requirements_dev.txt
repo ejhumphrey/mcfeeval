@@ -1,2 +1,8 @@
 Flask==0.11.1
+Flask-Cors
 requests
+protobuf
+googleapis-common-protos
+google-cloud==0.19.0
+gunicorn==19.6.0
+gcloud

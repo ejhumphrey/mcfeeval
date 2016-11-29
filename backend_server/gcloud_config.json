@@ -1,0 +1,7 @@
+{
+    "project_id": "<YOUR_PROJECT_ID>",
+    "storage": {
+        "name": "audio-data",
+        "backend": "gcp"
+    }
+}

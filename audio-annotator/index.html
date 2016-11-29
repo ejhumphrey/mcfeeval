@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Open-MIC Challenge</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/static/css/materialize.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/open-mic.css">
+
+    <script type="text/javascript" src="/static/js/lib/jquery-2.2.3.min.js"></script>
+    <script type="text/javascript" src="/static/js/lib/materialize.min.js"></script>
+    <script type="text/javascript" src="/static/js/lib/wavesurfer.min.js"></script>
+    <script type="text/javascript" src="/static/js/lib/wavesurfer.spectrogram.min.js"></script>
+    <script type="text/javascript" src="/static/js/colormap/colormap.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/src/message.js"></script>
+    <script type="text/javascript" src="/static/js/src/wavesurfer.regions.js"></script>
+    <script type="text/javascript" src="/static/js/src/wavesurfer.drawer.extended.js"></script>
+    <script type="text/javascript" src="/static/js/src/wavesurfer.labels.js"></script>
+    <script type="text/javascript" src="/static/js/src/hidden_image.js"></script>
+    <script type="text/javascript" src="/static/js/src/components.js"></script>
+    <script type="text/javascript" src="/static/js/src/annotation_stages.js"></script>
+    <script type="text/javascript" src="/static/js/src/main.js" defer></script>
+</head>
+<body>
+    <div class="row header">
+        <div class="col s12">
+            <div class="divider"></div>
+        </div>
+        <div class="col s6">
+            <div class="left">
+                <h5>Recording <span id="recording-index"></span> of 9</h5>
+                <h6 class="left">approx. <span id="time-remaining"></span> minutes remaining</h6>
+            </div>
+        </div>
+        <div class="col s6 ">
+            <div class="right">
+                <h5>Music Instrument Tagging</h5>
+                <a class="waves-effect waves-light modal-trigger right" href="#modal1">Tutorial Video</a>
+            </div>
+        </div>
+        <div class="col s12">
+            <div class="divider bottom"></div>
+        </div>
+    </div>
+    <!-- Modal Structure -->
+        <div id="modal1" class="modal">
+            <div class="modal-content">
+                <h4>Tutorial Video</h4>
+                <div class="videowrapper">
+                    <iframe id="tutorial-video" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="#!" class=" modal-action modal-close waves-effect waves-red btn-flat">Close</a>
+            </div>
+        </div>
+    <div class="row prompt">
+        <h4 class="center">Highlight &amp; Tag Each Sound</h4>
+        <h6 class="center">Click and drag to create a new annotation. Listen for sound events and tag them from the list under the audio recording.</h6>
+    </div>
+    <div class="annotation">
+        <div class="labels"></div>
+        <div class="audio_visual"></div>
+        <div class="play_bar"></div>
+        <div class="hidden_img"></div>
+        <div class="creation_stage_container"></div>
+        <div class="submit_container"></div>
+    </div>
+    <script>
+        // Change me! Is there an easy way to config this?
+        var dataUrl = 'http://localhost:8080/task';
+
+        $(document).ready(function(){
+            $('.modal-trigger').leanModal();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+
+GCLOUD = 'gcloud'
+LOCAL = 'local'

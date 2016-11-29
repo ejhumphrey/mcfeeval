@@ -1,73 +1,59 @@
 """Flask Backend Server for managing audio content.
 
+Please see README.md for instructions.
 
-Running Locally
----------------
-First, follow the directions to install the App Engine SDK:
+Starting Locally
+----------------
+You have two options:
 
-  https://cloud.google.com/appengine/downloads#Google_App_Engine_SDK_for_Python
+  $ python main.py --local --debug
 
-Then, once that's all set, you should be able to do the following from
-repository root:
+Or, to use GCP backend by default:
 
-  $ cd backend_server
   $ dev_appserver.py .
 
-At this point, the endpoints should be live via localhost:
 
-  $ curl -X GET localhost:8080/annotation/taxonomy
-  $ curl -F "audio=@some_file.mp3" localhost:8080/audio/upload
-
-
-Deploying to App Engine
------------------------
-For the time being, you will need to create your own App Engine project. To do
-so, follow the directions here:
-
-  https://console.cloud.google.com/freetrial?redirectPath=/start/appengine
-
-Once this is configured, make note of your `PROJECT_ID`, because you're going
-to need it.
-
-  $ cd backend_server
-  $ pip install -t lib -r requirements/setup/requirements_dev.txt
-  $ appcfg.py -A <PROJECT_ID> -V v1 update .
-
-From here, the app should be deployed to the following URL:
-
-  http://<PROJECT_ID>.appspot.com
-
-You can then poke the endpoints as one would expect:
-
-  $ curl -X GET http://<PROJECT_ID>.appspot.com/annotation/taxonomy
-  $ curl -F "audio=@some_file.mp3" http://<PROJECT_ID>/audio/upload
-
-
-Shutting Down App Engine
-------------------------
-After deploying the application, you may wish to shut it down so as to not
-ring up unnecessary charges / usage. Proceed to the following URL and click
-all the things that say "Shutdown" for maximum certainty:
-
-  https://console.cloud.google.com/appengine/instances?project=<PROJECT_ID>
-
-Be sure to replace <PROJECT_ID> with the appropriate one matching the account
-you've configured.
+Endpoints
+---------
+  - /audio/upload : POST
+  - /audio/<uri> : GET
+  - /annotation/submit : POST
+  - /annotation/taxonomy : GET
 """
 
+import argparse
+import datetime
+from flask import Flask, request, Response
+from flask import send_file
+from flask_cors import CORS
+import io
 import json
 import logging
+import random
 import requests
+import os
 
-from flask import Flask, request
+import pybackend.database
+import pybackend.mime
+import pybackend.storage
+import pybackend.utils
+
 
 logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
+CORS(app)
+
+# Set the cloud backend
+# TODO: This should be controlled by `app.yaml`, right?
+CLOUD_CONFIG = os.path.join(os.path.dirname(__file__), 'gcloud_config.json')
+app.config['cloud'] = json.load(open(CLOUD_CONFIG))
+
+SOURCE = "https://cosmir.github.io/open-mic/"
 
 
 @app.route('/')
 def hello():
-    return 'How do you know she is a witch?'
+    return 'oh hai'
 
 
 @app.route('/audio/upload', methods=['POST'])
@@ -77,16 +63,76 @@ def audio_upload():
 
     $ curl -F "audio=@some_file.mp3" localhost:8080/audio/upload
 
+    TODOs:
+      - Store user data (who uploaded this? IP address?)
+      -
     """
-    response = dict(message='nothing happened', status=400)
-    if request.method == 'POST':
-        afile = request.files['audio']
-        audio_bytes = afile.stream.read()
-        response['message'] = ("Received {} bytes of data."
-                               .format(len(audio_bytes)))
-        response['status'] = 200
+    audio_data = request.files['audio']
+    bytestring = audio_data.stream.read()
 
-    return json.dumps(response)
+    # Copy to cloud storage
+    store = pybackend.storage.Storage(
+        project_id=app.config['cloud']['project_id'],
+        **app.config['cloud']['storage'])
+
+    uri = str(pybackend.utils.uuid(bytestring))
+    fext = os.path.splitext(audio_data.filename)[-1]
+    filepath = "{}{}".format(uri, fext)
+    store.upload(bytestring, filepath)
+
+    # Index in datastore
+    # Keep things like extension, storage platform, mimetype, etc.
+    dbase = pybackend.database.Database(
+        project_id=app.config['cloud']['project_id'],
+        **app.config['cloud']['audio-db'])
+    record = dict(filepath=filepath,
+                  created=str(datetime.datetime.now()))
+    dbase.put(uri, record)
+    record.update(
+        uri=uri,
+        message="Received {} bytes of data.".format(len(bytestring)))
+
+    resp = Response(json.dumps(record), status=200,
+                    mimetype=pybackend.mime.MIMETYPES['json'])
+    resp.headers['Link'] = SOURCE
+    return resp
+
+
+@app.route('/audio/<uri>', methods=['GET'])
+def audio_download(uri):
+    """
+    To GET responses from this endpoint:
+
+    $ curl -XGET localhost:8080/audio/bbdde322-c604-4753-b828-9fe8addf17b9
+    """
+
+    dbase = pybackend.database.Database(
+        project_id=app.config['cloud']['project_id'],
+        **app.config['cloud']['audio-db'])
+
+    entity = dbase.get(uri)
+    if entity is None:
+        msg = "Resource not found: {}".format(uri)
+        app.logger.info(msg)
+        resp = Response(
+            json.dumps(dict(message=msg)),
+            status=404)
+
+    else:
+        store = pybackend.storage.Storage(
+            project_id=app.config['cloud']['project_id'],
+            **app.config['cloud']['storage'])
+
+        data = store.download(entity['filepath'])
+        app.logger.debug("Returning {} bytes".format(len(data)))
+
+        resp = send_file(
+            io.BytesIO(data),
+            attachment_filename=entity['filepath'],
+            mimetype=pybackend.mime.mimetype_for_file(entity['filepath']))
+
+    resp.headers['Link'] = SOURCE
+    return resp
 
 
 @app.route('/annotation/submit', methods=['POST'])
@@ -98,16 +144,43 @@ def annotation_submit():
         -X POST localhost:8080/annotation/submit \
         -d '{"message":"Hello Data"}'
     """
-    response = dict(message='nothing happened', status=400)
-    conds = [request.method == 'POST',
-             request.headers['Content-Type'] == 'application/json']
-    if all(conds):
-        print(request.json)
-        # obj = json.loads(request.data)
-        response['message'] = ("Received JSON data! {}".format(request.json))
-        response['status'] = 200
+    if request.headers['Content-Type'] == 'application/json':
+        app.logger.info("Received Annotation:\n{}"
+                        .format(json.dumps(request.json, indent=2)))
+        # Do a thing with the annotation
+        # Return some progress stats?
+        data = json.dumps(dict(message='Success!'))
+        status = 200
 
-    return json.dumps(response)
+        db = pybackend.database.Database(
+            project_id=app.config['cloud']['project_id'],
+            **app.config['cloud']['annotation-db'])
+        uri = str(pybackend.utils.uuid(json.dumps(request.json)))
+        record = dict(created=str(datetime.datetime.now()), **request.json)
+        db.put(uri, record)
+    else:
+        status = 400
+        data = json.dumps(dict(message='Invalid Content-Type; '
+                                       'only accepts application/json'))
+
+    resp = Response(
+        data, status=status, mimetype=pybackend.mime.MIMETYPES['json'])
+    resp.headers['Link'] = SOURCE
+    return resp
+
+
+def get_taxonomy():
+    tax_url = ("https://raw.githubusercontent.com/cosmir/open-mic/"
+               "ejh_20161119_iss8_webannot/data/instrument_taxonomy_v0.json")
+    res = requests.get(tax_url)
+    values = []
+    try:
+        schema = res.json()
+        values = schema['tag_open_mic_instruments']['value']['enum']
+    except BaseException as derp:
+        app.logger.error("Failed loading taxonomy: {}".format(derp))
+
+    return values
 
 
 @app.route('/annotation/taxonomy', methods=['GET'])
@@ -117,14 +190,43 @@ def annotation_taxonomy():
 
     $ curl -X GET localhost:8080/annotation/taxonomy
     """
-    tax_url = ("https://raw.githubusercontent.com/marl/jams/master/jams/"
-               "schemata/namespaces/tag/medleydb_instruments.json")
-    res = requests.get(tax_url)
-    tax = {}
-    if res.text:
-        tax = json.loads(res.text)
+    instruments = get_taxonomy()
+    status = 200 if instruments else 400
 
-    return json.dumps(tax)
+    resp = Response(json.dumps(instruments), status=status)
+    resp.headers['Link'] = SOURCE
+    return resp
+
+
+@app.route('/task', methods=['GET'])
+def next_task():
+    """
+    To fetch data at this endpoint:
+
+    $ curl -X GET localhost:8080/task
+    """
+    audio_url = "http://localhost:8080/audio/{}"
+
+    db = pybackend.database.Database(
+        project_id=app.config['cloud']['project_id'],
+        **app.config['cloud']['audio-db'])
+
+    random_uri = random.choice(list(db.keys()))
+
+    task = dict(feedback="none",
+                visualization='spectrogram',
+                proximityTag=[],
+                annotationTag=get_taxonomy(),
+                url=audio_url.format(random_uri),
+                numRecordings='?',
+                recordingIndex=random_uri,
+                tutorialVideoURL="https://www.youtube.com/embed/Bg8-83heFRM",
+                alwaysShowTags=True)
+    data = json.dumps(dict(task=task))
+    app.logger.debug("Returning:\n{}".format(data))
+    resp = Response(data)
+    resp.headers['Link'] = SOURCE
+    return resp
 
 
 @app.errorhandler(500)
@@ -134,4 +236,22 @@ def server_error(e):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--port", type=int, default=8080,
+        help="Port on which to serve.")
+    parser.add_argument(
+        "--local",
+        action='store_true', help="Use local backend services.")
+    parser.add_argument(
+        "--debug",
+        action='store_true',
+        help="Run the Flask application in debug mode.")
+
+    args = parser.parse_args()
+
+    if args.local:
+        config = os.path.join(os.path.dirname(__file__), 'local_config.json')
+        app.config['cloud'] = json.load(open(config))
+
+    app.run(debug=args.debug, port=args.port)
