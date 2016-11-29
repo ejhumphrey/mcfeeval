@@ -1,6 +1,17 @@
-# Content Management Backend Server
+# Content Annotation System
 
-This is the source for content management system designed to be deployed on Google App Engine or run locally for testing.
+This is the source for the backend Flask server, responsible for the following:
+
+- Tracking and uniquely identifying users
+- Ingesting source audio
+- Building tasks over the ingested database
+- Serving tasks on request
+- Validating annotation submissions
+- Returning user statistics on request
+
+
+## Annotation State Diagram
+![Annotation State Diagram](https://github.com/cosmir/open-mic/raw/master/docs/img/annotation_state_diagram.png "Annotation State Diagram")
 
 
 ## Dependencies
@@ -25,38 +36,40 @@ $ py.test -v .
 All tests should pass; halt everything if this is not the case. In all likelihood, failure is the result of a broken / missing dependency, but please create a new issue (with a console log and steps to reproduce) if you believe otherwise.
 
 
-## Running Locally
+## Using the CAS machinery
 
-You can now run this project locally from the command line:
+### Running Locally
+
+First, follow the directions to install the [App Engine SDK](https://cloud.google.com/appengine/downloads#Google_App_Engine_SDK_for_Python)
+
+Then, once that's all set, you should be able to do the following from
+repository root:
 
 ```
 $ dev_appserver.py .
 ```
 
-The endpoints should now be live via `localhost` (default deployment is to port 8080):
+At this point, the endpoints should be live via localhost (default deployment is to port 8080):
 
 ```
-  $ curl -X GET localhost:8080/annotation/taxonomy
-  $ curl -F "audio=@some_file.mp3" localhost:8080/audio/upload
+$ curl -X GET localhost:8080/annotation/taxonomy
+$ curl -F "audio=@some_file.mp3" localhost:8080/audio/upload
 ```
 
-
-## Deploying to App Engine
+### Deploying to App Engine
 
 `TODO(ejhumphrey):` Is it possible to have pre-deployment testing hooks? If so, that should be documented here. **Update:** Survey says [yes](https://github.com/GoogleCloudPlatform/continuous-deployment-demo/blob/master/.travis.yml).
 
-For the time being, you will need to create your own App Engine project. To do so, follow the directions here:
+For the time being, you will need to create your own App Engine project. To do
+so, [follow the directions here](https://console.cloud.google.com/freetrial?redirectPath=/start/appengine).
+
+Once this is configured, make note of your `PROJECT_ID`, because you're going
+to need it.
 
 ```
-  https://console.cloud.google.com/freetrial?redirectPath=/start/appengine
-```
-
-Once this is configured, make note of your `PROJECT_ID`, because you're going to need it.
-
-```
-  $ cd backend_server
-  $ pip install -t lib -r requirements/setup/requirements_dev.txt
-  $ appcfg.py -A <PROJECT_ID> -V v1 update .
+$ cd backend_server
+$ pip install -t lib -r requirements/setup/requirements_dev.txt
+$ appcfg.py -A <PROJECT_ID> -V v1 update .
 ```
 
 From here, the app should be deployed to the following URL:
@@ -82,5 +95,3 @@ After deploying the application, you may wish to shut it down so as to not ring 
 ```
 
 Be sure to replace `<PROJECT_ID>` with the appropriate one matching the account you've configured.
-
-

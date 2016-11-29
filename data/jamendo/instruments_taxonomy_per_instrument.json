@@ -1,0 +1,385 @@
+{
+    "cajon": [
+        "percussion"
+    ], 
+    "mellotron": [
+        "electric"
+    ], 
+    "tambura": [
+        "string"
+    ], 
+    "flugelhorn": [
+        "wind"
+    ], 
+    "electric guitar": [
+        "electric", 
+        "popular"
+    ], 
+    "bongo": [
+        "percussion", 
+        "popular"
+    ], 
+    "keyboard": [
+        "popular", 
+        "electronic"
+    ], 
+    "clarinet": [
+        "popular", 
+        "wind"
+    ], 
+    "ocarina": [
+        "wind"
+    ], 
+    "glass armonica": [
+        "others"
+    ], 
+    "accordion": [
+        "others"
+    ], 
+    "pandeiro": [
+        "percussion"
+    ], 
+    "castanets": [
+        "percussion"
+    ], 
+    "sampler": [
+        "electronic"
+    ], 
+    "gobletdrum": [
+        "percussion"
+    ], 
+    "piano": [
+        "others", 
+        "popular"
+    ], 
+    "drum machine": [
+        "electronic"
+    ], 
+    "triangle": [
+        "percussion", 
+        "popular"
+    ], 
+    "pipe organ": [
+        "wind"
+    ], 
+    "marimba": [
+        "percussion"
+    ], 
+    "erhu": [
+        "string"
+    ], 
+    "slide guitar": [
+        "electric"
+    ], 
+    "gimbri": [
+        "string"
+    ], 
+    "santur": [
+        "string"
+    ], 
+    "bodhran": [
+        "percussion"
+    ], 
+    "acoustic guitar": [
+        "popular", 
+        "string"
+    ], 
+    "organ": [
+        "others"
+    ], 
+    "singing bowl": [
+        "others"
+    ], 
+    "vibraphone": [
+        "percussion"
+    ], 
+    "saxophone": [
+        "others", 
+        "popular"
+    ], 
+    "lap steel guitar": [
+        "string"
+    ], 
+    "concertina": [
+        "others"
+    ], 
+    "electric piano": [
+        "electric"
+    ], 
+    "tubular bell": [
+        "percussion"
+    ], 
+    "horn": [
+        "wind"
+    ], 
+    "kalimba": [
+        "others"
+    ], 
+    "computer": [
+        "electronic"
+    ], 
+    "mandola": [
+        "string"
+    ], 
+    "trombone": [
+        "others"
+    ], 
+    "hautbois": [
+        "wind"
+    ], 
+    "pan flute": [
+        "wind"
+    ], 
+    "didgeridoo": [
+        "wind"
+    ], 
+    "tuba": [
+        "wind"
+    ], 
+    "conga": [
+        "percussion", 
+        "popular"
+    ], 
+    "jew's-harp": [
+        "others"
+    ], 
+    "ney": [
+        "wind"
+    ], 
+    "taiko": [
+        "percussion"
+    ], 
+    "sousaphone": [
+        "others"
+    ], 
+    "cabasa": [
+        "percussion"
+    ], 
+    "flute": [
+        "popular", 
+        "wind"
+    ], 
+    "mbira": [
+        "others"
+    ], 
+    "bass": [
+        "electric", 
+        "popular"
+    ], 
+    "tamtam": [
+        "percussion"
+    ], 
+    "mellophone": [
+        "others"
+    ], 
+    "sarrusophone": [
+        "others"
+    ], 
+    "cowbell": [
+        "percussion"
+    ], 
+    "drums": [
+        "popular"
+    ], 
+    "shamisen": [
+        "string"
+    ], 
+    "drum": [
+        "percussion"
+    ], 
+    "acoustic bass guitar": [
+        "string"
+    ], 
+    "rhodes": [
+        "electric"
+    ], 
+    "harmonica": [
+        "others", 
+        "popular"
+    ], 
+    "berimbau": [
+        "string"
+    ], 
+    "mandolin": [
+        "string"
+    ], 
+    "double bass": [
+        "string"
+    ], 
+    "bugle": [
+        "others"
+    ], 
+    "timpani": [
+        "percussion"
+    ], 
+    "bell": [
+        "percussion"
+    ], 
+    "kazoo": [
+        "wind"
+    ], 
+    "celesta": [
+        "others"
+    ], 
+    "steelpan": [
+        "percussion"
+    ], 
+    "tabla": [
+        "percussion"
+    ], 
+    "guiro": [
+        "others"
+    ], 
+    "synthesizer": [
+        "electronic"
+    ], 
+    "harpsichord": [
+        "others"
+    ], 
+    "harp": [
+        "string"
+    ], 
+    "charango": [
+        "string"
+    ], 
+    "udu": [
+        "percussion"
+    ], 
+    "xylophone": [
+        "percussion", 
+        "popular"
+    ], 
+    "koto": [
+        "string"
+    ], 
+    "oud": [
+        "string"
+    ], 
+    "glockenspiel": [
+        "percussion"
+    ], 
+    "shekere": [
+        "percussion"
+    ], 
+    "dunun": [
+        "percussion"
+    ], 
+    "bombarde": [
+        "wind"
+    ], 
+    "kaosspad": [
+        "electronic"
+    ], 
+    "cimbalom": [
+        "string"
+    ], 
+    "clavichord": [
+        "others"
+    ], 
+    "fiddle": [
+        "string"
+    ], 
+    "cello": [
+        "popular", 
+        "string"
+    ], 
+    "balalaika": [
+        "string"
+    ], 
+    "piccolo": [
+        "wind"
+    ], 
+    "djembe": [
+        "percussion", 
+        "popular"
+    ], 
+    "sitar": [
+        "string"
+    ], 
+    "carillon": [
+        "percussion"
+    ], 
+    "metallophone": [
+        "percussion"
+    ], 
+    "violin": [
+        "popular", 
+        "string"
+    ], 
+    "handbell": [
+        "percussion"
+    ], 
+    "harmonium": [
+        "electric"
+    ], 
+    "electronic organ": [
+        "electronic"
+    ], 
+    "ewi": [
+        "electronic"
+    ], 
+    "ukulele": [
+        "popular", 
+        "string"
+    ], 
+    "bassoon": [
+        "wind"
+    ], 
+    "trumpet": [
+        "others", 
+        "popular"
+    ], 
+    "oboe": [
+        "wind"
+    ], 
+    "theremin": [
+        "electric"
+    ], 
+    "viola": [
+        "string"
+    ], 
+    "tambourine": [
+        "percussion"
+    ], 
+    "banjo": [
+        "popular", 
+        "string"
+    ], 
+    "melodica": [
+        "others"
+    ], 
+    "hang drum": [
+        "percussion"
+    ], 
+    "hammond": [
+        "electric", 
+        "electronic"
+    ], 
+    "cvp-509": [
+        "electronic"
+    ], 
+    "cymbal": [
+        "percussion"
+    ], 
+    "bandoneon": [
+        "others"
+    ], 
+    "lute": [
+        "string"
+    ], 
+    "tin whistle": [
+        "wind"
+    ], 
+    "alphorn": [
+        "wind"
+    ], 
+    "bagpipes": [
+        "others"
+    ], 
+    "kanun": [
+        "string"
+    ], 
+    "balafon": [
+        "percussion"
+    ]
+}

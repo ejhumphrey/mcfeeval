@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <link rel="stylesheet" href="/assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <script src="/assets/bootstrap/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {inlineMath: [['$','$']]}
+      });
+    </script>
+    <script type="text/javascript" async src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_CHTML"></script>
+
+    <title>{{ page.title }}</title>
+  </head>
+  <body>
+
+    <nav class="navbar navbar-inverse">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/">COSMIR</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="/">Home</a></li>
+            <li class="active"><a href="/{{ site.github.project_title }}/">OpenMIC Challenge</a></li><!-- always active because we're under a challenge's site -->
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+            <li><a href="/about.html">About</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div class="container" role="main">
+      <ul class="nav nav-tabs nav-tabs-left">
+        <li role="presentation" {% if page.url == "/" %}class="active"{% endif %}><a href="/{{ site.github.project_title }}/">OpenMIC</a></li>
+        <li role="presentation" {% if page.url == "/task1.html" %}class="active"{% endif %}><a href="/{{ site.github.project_title }}/task1.html">Task 1</a></li>
+        <li role="presentation" {% if page.url == "/task2.html" %}class="active"{% endif %}><a href="/{{ site.github.project_title }}/task2.html">Task 2</a></li>
+        <li role="presentation" {% if page.url == "/contribute.html" %}class="active"{% endif %}><a href="/{{ site.github.project_title }}/contribute.html">Contribute</a></li>
+        <li role="presentation" {% if page.url == "/downloads.html" %}class="active"{% endif %}><a href="#">Downloads</a></li>
+      </ul>
+      <ul class="nav nav-tabs nav-tabs-right">
+        <li role="presentation" {% if page.url == "/submit.html" %}class="active"{% endif %}><a href="#">Submit</a></li>
+      </ul>
+      <div class="tab-content">
+        <div class="tab-pane active" id="1">
+          {{ content }}
+        </div>
+      </div>
+    </div>
+
+    <div class="container" style="margin-top:40px">
+      <div class="alert alert-info text-center" role="alert">This website is still under development!</div>
+    </div>
+
+    <footer class="bs-footer small">
+      <div class="container">
+        <div class="pull-left">&copy; 2016 COSMIR</div>
+        <div class="pull-right">
+          <ul>
+            <li><a href="/code-of-conduct.html">Code of Conduct</a></li>
+            <li><a href="/contact.html">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+
+  </body>
+</html>
