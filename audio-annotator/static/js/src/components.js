@@ -4,7 +4,7 @@
  * Purpose:
  *   Used to create the timestamps of segment start and end times and play bar
  * Dependencies:
- *   jQuey, urban-ears.css
+ *   jQuery, open-mic.css
  */
 
 var Util = {
@@ -25,7 +25,7 @@ var Util = {
     // Return input elements that will contain the start, end and duration times of a sound segment
     createSegmentTime: function() {
         var timeDiv = $('<div>', {class: 'time_segment'});
-        
+
         var start = $('<span>', {text: 'Start:'});
         var startInput = $('<input>', {
             type: 'text',
@@ -46,7 +46,7 @@ var Util = {
             readonly: true
         });
 
-        // Return the parent element with the all the time elements appended 
+        // Return the parent element with the all the time elements appended
         return timeDiv.append([start, startInput, end, endInput, duration, durationInput]);
     }
 };
@@ -55,7 +55,7 @@ var Util = {
  * Purpose:
  *   Used for the play button and timestamp that controls how the wavesurfer audio is played
  * Dependencies:
- *   jQuery, Font Awesome, Wavesurfer (lib/wavesurfer.min.js), Util (src/components.js), urban-ears.css
+ *   jQuery, Font Awesome, Wavesurfer (lib/wavesurfer.min.js), Util (src/components.js), open-mic.css
  */
 
 function PlayBar(wavesurfer) {
@@ -89,11 +89,11 @@ PlayBar.prototype = {
             my.trackEvent('click-' + (my.wavesurfer.isPlaying() ? 'pause' : 'play'));
             my.wavesurfer.playPause();
         });
-        
+
         // Create audio timer text
         var timer = $('<span>', {
             class: 'timer',
-        });    
+        });
 
         this.playBarDom = [playButton, timer];
     },
@@ -137,10 +137,10 @@ PlayBar.prototype = {
         this.wavesurfer.on('play', function () {
             $('.play_audio').removeClass('fa-play-circle').addClass('fa-stop-circle');
         });
-        
+
         this.wavesurfer.on('pause', function () {
             $('.play_audio').removeClass('fa-stop-circle').addClass('fa-play-circle');
-        }); 
+        });
 
         this.wavesurfer.on('seek', function () {
             my.updateTimer();
@@ -165,7 +165,7 @@ PlayBar.prototype = {
  * Purpose:
  *   Used for the workflow buttons that are used to submit annotations or to exit the task
  * Dependencies:
- *   jQuery, urban-ears.css
+ *   jQuery, open-mic.css
  */
 
 function WorkflowBtns(exitUrl) {

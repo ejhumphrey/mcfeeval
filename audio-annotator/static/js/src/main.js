@@ -13,7 +13,7 @@
  *       magma // color scheme array that maps 0 - 255 to rgb values
  *
  */
-function UrbanEars() {
+function OpenMic() {
     this.wavesurfer;
     this.playBar;
     this.stages;
@@ -73,7 +73,7 @@ function UrbanEars() {
     this.addEvents();
 }
 
-UrbanEars.prototype = {
+OpenMic.prototype = {
     addWaveSurferEvents: function() {
         var my = this;
 
@@ -245,8 +245,8 @@ UrbanEars.prototype = {
 
 function main() {
     // Create all the components
-    var urbanEars = new UrbanEars();
+    var openMic = new OpenMic();
     // Load the first audio annotation task
-    urbanEars.loadNextTask();
+    openMic.loadNextTask();
 }
 main();
