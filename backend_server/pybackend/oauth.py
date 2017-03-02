@@ -74,6 +74,10 @@ class Spotify(BaseClient):
     def user(self):
         return self.client.get('https://api.spotify.com/v1/me').data
 
+    @property
+    def uri(self):
+        return self.user.get("uri", None)
+
 
 APPS = {
     Google.NAME: Google,

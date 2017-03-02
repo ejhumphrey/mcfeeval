@@ -27,13 +27,11 @@ import json
 import logging
 import mimetypes
 import os
-import random
 import requests
 import yaml
 
 from flask import Flask, Response, request, send_file
 from flask import session, redirect, url_for, jsonify, render_template
-
 from functools import wraps
 
 import pybackend
@@ -47,6 +45,7 @@ app.secret_key = 'development'
 
 SOURCE = "https://cosmir.github.io/open-mic/"
 AUDIO_EXTENSIONS = set(['wav', 'ogg', 'mp3', 'au', 'aiff'])
+MAX_SUBMISSION_ATTEMPTS = 5
 OAUTH = None
 
 
@@ -133,7 +132,12 @@ def authorized(app_name='spotify'):
             return ('Access denied: reason={error_reason} '
                     'error={error_description}'.format(**request.args))
 
+        # TODO: Cannot access `oauthor.uri` until after the session token has
+        #       been set ... :thinkingface:
         session[pybackend.oauth.TOKEN] = (resp['access_token'], app_name)
+        session[pybackend.oauth.TOKEN] = (resp['access_token'], app_name,
+                                          oauthor.uri)
+        app.logger.info("current_user: {}".format(oauthor.user))
         return redirect(url_for('index'))
     else:
         return ("To complete log-in, proceed to this URL: {}"
@@ -171,10 +175,98 @@ def me():
     return jsonify(oauthor.user)
 
 
+def store_raw_audio(db, store, audio, source=None):
+    """Convenience function to store an audio file object through the webapp.
+
+    TODO: This should probably move ... somewhere else? Perhaps inside a
+    controller / delegate?
+
+    Parameters
+    ----------
+    db : pybackend.database.Database
+        Interface to the database backend.
+
+    store : pybackend.database.Database
+        Interface to the binary storage backend.
+
+    audio : werkzeug.datastructures.FileStorage
+        Audio object referenced by a request object, when passed as a file in a
+        POST request.
+
+    source : dict, default=None
+        Optional source metadata, describing where in another audio file this
+        data may have been drawn from.
+
+    Returns
+    -------
+    record : dict
+        Object containing data about the new audio object, including but not
+        limited to the `uri`.
+        TODO: This response object has drifted on the audio upload branch, and
+              should follow that lead.
+    """
+    file_ext = os.path.splitext(audio.filename)[-1][1:]
+    if file_ext not in AUDIO_EXTENSIONS:
+        raise ValueError('Attempted upload of unsupported filetype.')
+
+    bytestring = audio.stream.read()
+    # Copy to cloud storage
+    gid = str(pybackend.utils.uuid(bytestring))
+    store.put(gid, bytestring)
+
+    # Index in datastore
+    uri = pybackend.urilib.join('audio', gid)
+    record = dict(file_ext=file_ext, created=str(datetime.datetime.utcnow()))
+
+    # TODO: Discuss how we want to handle 'sourced' relationships.
+    if source:
+        record['source'] = source
+
+    db.put(uri, record)
+    return dict(uri=uri,
+                message="Received {} bytes of data.".format(len(bytestring)))
+
+
+def fetch_audio_data(db, store, gid):
+    """Convenience function to retrieve audio data through the webapp.
+
+    TODO: This should probably move ... somewhere else? Perhaps inside a
+    controller / delegate?
+
+    Parameters
+    ----------
+    db : pybackend.database.Database
+        Interface to the database backend.
+
+    store : pybackend.database.Database
+        Interface to the binary storage backend.
+
+    gid : str
+        A gid, pointing to a unique audio object.
+
+    Returns
+    -------
+    data : bytes
+        Raw bytestring of the audio data.
+
+    file_ext : str
+        File extension of the audio bytestream.
+    """
+    uri = pybackend.urilib.join('audio', gid)
+    entity = db.get(uri)
+    data, fext = b'', None
+    if entity:
+        data = store.get(gid)
+        app.logger.debug("Downloaded {} bytes".format(len(data)))
+        fext = entity['file_ext']
+    return data, fext
+
+
 @app.route('/api/v0.1/audio', methods=['POST'])
 @authenticate
 def audio_upload():
-    """
+    """Endpoint for uploading source audio content.
+
     To POST files to this endpoint:
 
     $ curl -F "audio=@some_file.mp3" localhost:8080/api/v0.1/audio
@@ -184,45 +276,25 @@ def audio_upload():
       - File metadata
     """
     app.logger.info("Upload request from {}".format(request.remote_addr))
-
-    audio_data = request.files['audio']
-    file_ext = os.path.splitext(audio_data.filename)[-1][1:]
-    if file_ext not in AUDIO_EXTENSIONS:
-        app.logger.exception('Attempted upload of unsupported filetype.')
-        return 'Filetype not supported.', 400
-
-    bytestring = audio_data.stream.read()
-    app.logger.info("Uploaded data: type={}, len={}"
-                    .format(type(bytestring), len(bytestring)))
-
-    # Copy to cloud storage
+    audio = request.files['audio']
     store = pybackend.storage.Storage(
         project=app.config['cloud']['project'],
         **app.config['cloud']['storage'])
-
-    gid = str(pybackend.utils.uuid(bytestring))
-    store.put(gid, bytestring)
-
-    # Index in the database
-    dbase = pybackend.database.Database(
+    db = pybackend.database.Database(
         project=app.config['cloud']['project'],
         **app.config['cloud']['database'])
-
-    uri = pybackend.urilib.join('audio', gid)
-    record = dict(file_ext=file_ext,
-                  created=str(datetime.datetime.now()),
-                  remote_addr=request.remote_addr,
-                  num_bytes=len(bytestring),
-                  **request.form)
-    dbase.put(uri, record)
-    response_data = dict(
-        uri=uri,
-        message="Received {} bytes of data.".format(len(bytestring)))
-
-    resp = Response(json.dumps(response_data), status=200,
-                    mimetype=mimetypes.types_map[".json"])
-    resp.headers['Link'] = SOURCE
-    return resp
+    try:
+        record = store_raw_audio(db, store, audio)
+        resp = Response(json.dumps(dict(uri=record['uri'])), status=200,
+                        mimetype=mimetypes.types_map[".json"])
+    except ValueError as derp:
+        resp = Response(
+            json.dumps(dict(message=str(derp))),
+            status=requests.status_codes.codes.BAD_REQUEST,
+            mimetype=mimetypes.types_map[".json"])
+    finally:
+        resp.headers['Link'] = SOURCE
+        return resp
 
 
 @app.route('/api/v0.1/audio/<gid>', methods=['GET'])
@@ -231,73 +303,104 @@ def audio_download(gid):
     """
     To GET responses from this endpoint:
 
-    $ curl -XGET localhost:8080/api/v0.1/audio/\
-        bbdde322-c604-4753-b828-9fe8addf17b9
+    $ curl -XGET "localhost:8080/api/v0.1/audio/
+        bbdde322-c604-4753-b828-9fe8addf17b9"
     """
-    dbase = pybackend.database.Database(
+    store = pybackend.storage.Storage(
+        project=app.config['cloud']['project'],
+        **app.config['cloud']['storage'])
+    db = pybackend.database.Database(
         project=app.config['cloud']['project'],
         **app.config['cloud']['database'])
-
-    uri = pybackend.urilib.join('audio', gid)
-
-    entity = dbase.get(uri)
-    if entity is None:
-        msg = "Resource not found: {}".format(uri)
+    data, fext = fetch_audio_data(db, store, gid)
+    if data:
+        # TODO: can this use a FileStorage object also?
+        filename = os.path.extsep.join([gid, fext])
+        resp = send_file(
+            io.BytesIO(data),
+            attachment_filename=filename,
+            mimetype=pybackend.utils.mimetype_for_file(filename))
+    else:
+        msg = "Resource not found: {}".format(gid)
         app.logger.info(msg)
         resp = Response(
             json.dumps(dict(message=msg)),
             status=404)
 
-    else:
-        store = pybackend.storage.Storage(
-            project=app.config['cloud']['project'],
-            **app.config['cloud']['storage'])
-
-        data = store.get(gid)
-        app.logger.debug("Returning {} bytes".format(len(data)))
-
-        filename = os.path.extsep.join([gid, entity['file_ext']])
-        resp = send_file(
-            io.BytesIO(data),
-            attachment_filename=filename,
-            mimetype=pybackend.utils.mimetype_for_file(filename))
-
     resp.headers['Link'] = SOURCE
     return resp
 
 
-@app.route('/api/v0.1/annotation/submit', methods=['POST'])
+@app.route('/api/v0.1/annotation', methods=['POST'])
 @authenticate
 def annotation_submit():
     """
     To POST data to this endpoint:
 
     $ curl -H "Content-type: application/json" \
-        -X POST localhost:8080/api/v0.1/annotation/submit \
-        -d '{"message":"Hello Data"}'
+        -X POST localhost:8080/annotation \
+        -d '{"request_id": "xyz", "tags": ["a"]}'
     """
-    if request.headers['Content-Type'] == 'application/json':
-        app.logger.info("Received Annotation:\n{}"
-                        .format(json.dumps(request.json, indent=2)))
-        # Do a thing with the annotation
-        # Return some progress stats?
-        data = json.dumps(dict(message='Success!'))
-        status = 200
+    if request.headers['Content-Type'] != 'application/json':
+        raise ValueError("Invalid content type.")
 
-        db = pybackend.database.Database(
-            project=app.config['cloud']['project'],
-            **app.config['cloud']['database'])
-        gid = str(pybackend.utils.uuid(json.dumps(request.json)))
-        uri = pybackend.urilib.join('annotation', gid)
-        record = pybackend.models.AnnotationResponse(
-            created=str(datetime.datetime.now()),
-            response=request.json,
-            user_id='anonymous')
-        db.put(uri, record.flatten())
-    else:
-        status = 400
-        data = json.dumps(dict(message='Invalid Content-Type; '
-                                       'only accepts application/json'))
+    app.logger.info("Received Annotation:\n{}"
+                    .format(json.dumps(request.json, indent=2)))
+
+    user_id = session.get(pybackend.oauth.TOKEN)[2]
+    request_gid = request.json['request_id']
+    # Fetch the request object and validate this submission.
+    request_uri = pybackend.urilib.join('request', request_gid)
+
+    db = pybackend.database.Database(
+        project=app.config['cloud']['project'],
+        **app.config['cloud']['database'])
+    entity = db.get(request_uri)
+    if not entity:
+        raise ValueError("Invalid `request_id`.")
+
+    task_request = pybackend.models.TaskRequest.from_flat(**entity)
+    app.logger.info("Retrieved task: {}".format(task_request))
+
+    # TODO: Each failure should be a status response rather than an exception.
+    # TODO: And they should redirect?
+    if task_request['user_id'] != user_id:
+        raise ValueError("You are not authorized to submit data for this "
+                         "request_id.")
+    # TODO: Do we want expiration dates to be ints or datetime strings?
+    elif task_request['expires'] < int(datetime.datetime.utcnow()
+                                       .strftime("%s")):
+        raise ValueError(
+            "The submission period for this task has expired.")
+    # TODO: How many attempts vs the limit
+    elif len(task_request['attempts']) > MAX_SUBMISSION_ATTEMPTS:
+        raise ValueError("This request has exceeded its valid number of "
+                         "submissions.")
+    elif task_request['complete']:
+        raise ValueError("An annotation has already been accepted for this "
+                         "request.")
+    # TODO: Does the task have an answer to compare with?
+    # TODO: If the response is invalid, log it (in `attempts`) and return
+
+    # Alright! The submission has passed all the tests.
+    # Update the Request record
+    # TODO: These records should be flattened by default...
+    task_request['complete'] = True
+    db.put(request_uri, task_request.flatten())
+
+    # Store the annotation
+    data = json.dumps(dict(message='Success!'))
+    status = 200
+
+    annot = pybackend.models.AnnotationResponse.template(
+        response=request.json,
+        task_uri=task_request['task_uri'],
+        request_uri=request_uri,
+        user_id=user_id)
+
+    annot_gid = str(pybackend.utils.uuid(json.dumps(annot)))
+    annot_uri = pybackend.urilib.join('annotation', annot_gid)
+    db.put(annot_uri, annot.flatten())
 
     resp = Response(
         data, status=status, mimetype=mimetypes.types_map[".json"])
@@ -305,28 +408,16 @@ def annotation_submit():
     return resp
 
 
-def get_taxonomy():
-    tax_url = ("https://raw.githubusercontent.com/cosmir/open-mic/"
-               "master/data/instrument_taxonomy_v0.json")
-    res = requests.get(tax_url)
-    values = []
-    try:
-        schema = res.json()
-        values = schema['tag_open_mic_instruments']['value']['enum']
-    except BaseException as derp:
-        app.logger.error("Failed loading taxonomy: {}".format(derp))
-
-    return values
-
-
-@app.route('/api/v0.1/annotation/taxonomy', methods=['GET'])
-def annotation_taxonomy():
+@app.route('/api/v0.1/taxonomy/<key>', methods=['GET'])
+def annotation_taxonomy(key):
     """
     To fetch data at this endpoint:
 
-    $ curl -X GET localhost:8080/api/v0.1/annotation/taxonomy
+        $ curl -X GET localhost:8080/taxonomy/instrument_taxonomy_v0
     """
-    instruments = get_taxonomy()
+    # Break this out into application state. Should at least cache, but
+    # probably fetch once.
+    instruments = pybackend.taxonomy.get(key)
     status = 200 if instruments else 400
 
     resp = Response(json.dumps(instruments), status=status)
@@ -334,10 +425,91 @@ def annotation_taxonomy():
     return resp
 
 
+@app.route('/api/v0.1/task', methods=['POST'])
+def create_task():
+    """Create an annotation 'task' from given metadata.
+
+    TODO: Unclear what the relationship between uploading, trimming, and task
+    creation should be here.
+
+    Body Data
+    ---------
+    uri : str
+        URI of the object over which to build a task.
+
+    taxonomy : str, default='instrument_taxonomy_v0'
+        A taxonomy key; see `pybackend.taxonomy.get` for more info.
+
+    feedback : str, default='none'
+
+    visualization : str, default=waveform
+
+    Response
+    --------
+    uri : str
+        A URI for the generated task.
+    """
+    app.logger.info("json: {}".format(request.json))
+
+    db = pybackend.database.Database(
+        project=app.config['cloud']['project'],
+        **app.config['cloud']['database'])
+    uri = request.json.get("uri", None)
+    if not uri:
+        raise ValueError(
+            "'audio_uri' must be specified if no audio is uploaded.")
+
+    # `source` should track provenance information (from whence it came).
+    source = dict()
+    task = pybackend.models.Task.template(
+        audio_uri=uri, source=source,
+        taxonomy=request.json.get('taxonomy', 'instrument_taxonomy_v0'),
+        feedback=request.json.get('feedback', 'none'),
+        visualization=request.json.get('visualization', 'waveform'))
+
+    gid = str(pybackend.utils.uuid(json.dumps(task)))
+    task_uri = pybackend.urilib.join('task', gid)
+
+    db.put(task_uri, task.flatten())
+    # TODO: Maybe don't return this? depends on who can create them...
+    return jsonify(dict(uri=task_uri))
+
+
+# TODO: It's not clear that we want this route to be public. Or at all.
+@app.route('/api/v0.1/task/<gid>', methods=['GET'])
+def get_task(gid):
+    """
+    To fetch data at this endpoint:
+
+    $ curl -X GET localhost:8080/task/<gid>
+    """
+    db = pybackend.database.Database(
+        project=app.config['cloud']['project'],
+        **app.config['cloud']['database'])
+
+    uri = pybackend.urilib.join('task', gid)
+    entity = db.get(uri)
+    if not entity:
+        raise ValueError("No task exists for the given gid: {}".format(gid))
+
+    task = pybackend.models.Task.from_flat(**entity)
+    audio_url = "api/v0.1/audio/{gid}".format(
+        gid=pybackend.urilib.split(task['audio_uri'])[1])
+
+    tax = pybackend.taxonomy.get(task['payload'].pop('taxonomy'))
+    data = json.dumps(dict(audio_url=audio_url, taxonomy=tax,
+                           **task['payload']))
+    app.logger.debug("Returning:\n{}".format(data))
+    resp = Response(data)
+    resp.headers['Link'] = SOURCE
+    return resp
+
+
 @app.route('/api/v0.1/task', methods=['GET'])
 @authenticate
-def next_task():
-    """
+def request_task():
+    """Creates a "Request"
+
     To fetch data at this endpoint:
 
     $ curl -X GET localhost:8080/api/v0.1/task
@@ -346,20 +518,53 @@ def next_task():
         project=app.config['cloud']['project'],
         **app.config['cloud']['database'])
 
-    random_uri = random.choice(list(db.uris(kind='audio')))
-    audio_url = "api/v0.1/audio/{gid}".format(
-        gid=pybackend.urilib.split(random_uri)[1])
+    # TODO: Improve task selection logic
+    #   - User conditional
+    #   - Get the URI of the highest priority task, i.e.
+    #         sortby=['priority'], order='descending'
+    query = db.query(filter=('kind', 'task'))
 
-    task = dict(feedback="none",
-                visualization=random.choice(['waveform', 'spectrogram']),
-                proximityTag=[],
-                annotationTag=get_taxonomy(),
-                url=audio_url,
-                numRecordings='?',
-                recordingIndex=random_uri,
-                tutorialVideoURL="https://www.youtube.com/embed/Bg8-83heFRM",
-                alwaysShowTags=True)
-    data = json.dumps(dict(task=task))
+    query.filter_keys()
+    task_uri = next(query)
+    if not task_uri:
+        raise ValueError("No tasks exists!")
+
+    # Build a request object
+    # TODO: This *should* be sufficiently unique, but some kind of salt / rng
+    #       couldn't hurt.
+    task_request = pybackend.models.TaskRequest.template(
+        user_id=session.get(pybackend.oauth.TOKEN)[2],
+        task_uri=task_uri, expires_in=600)
+
+    app.logger.debug("task_request: {}".format(task_request))
+    request_gid = str(pybackend.utils.uuid(json.dumps(task_request)))
+    request_uri = pybackend.urilib.join('request', request_gid)
+
+    # TODO: Database objects should try to flatten (and maybe expand?) records
+    #       on their own.
+    db.put(request_uri, task_request.flatten())
+
+    # Retrieve the actual task data & build a unique response.
+    # TODO: Give `get` a strict field to raise its own errors. (Flask recovers
+    #       from exceptions well, right?)
+    entity = db.get(task_uri)
+    if not entity:
+        # This should never happen, unless a task is deleted between the above
+        # query and now.
+        raise ValueError("No entity exists for the given uri: {}"
+                         "".format(task_uri))
+
+    task = pybackend.models.Task.from_flat(**entity)
+    audio_url = "api/v0.1/audio/{gid}".format(
+        gid=pybackend.urilib.split(task['audio_uri'])[1])
+    app.logger.info("retrieved task: {}".format(task))
+    tax = pybackend.taxonomy.get(task['payload'].pop('taxonomy'))
+    data = json.dumps(
+        dict(request_id=request_gid,
+             task=dict(url=audio_url,
+                       # This `annotationTag` field is pain waiting to happen.
+                       annotationTag=tax,
+                       **task['payload'])))
     app.logger.debug("Returning:\n{}".format(data))
     resp = Response(data)
     resp.headers['Link'] = SOURCE

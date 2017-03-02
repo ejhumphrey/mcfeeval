@@ -66,7 +66,7 @@ def launch_cms(port, noauth=False, max_retries=8):
 
     cmd = "python {} --port {} --config {} {}".format(
         os.path.join('backend_server', 'main.py'), port,
-        os.path.join('backend_server', '.config-local.yaml'), " ".join(flags))
+        os.path.join('backend_server', '.config.yaml'), " ".join(flags))
     logging.info("server: {}".format(cmd))
     server = subprocess.Popen(cmd.split(" "), stdout=subprocess.PIPE,
                               preexec_fn=os.setsid)
@@ -108,9 +108,17 @@ def run(port):
     fnames = ["267508__mickleness__3nf.ogg",
               "345515__furbyguy__strings-piano.ogg"]
     for fn in fnames:
+        # Upload audio
         fpath = os.path.abspath(os.path.join('data', 'audio', fn))
-        requests.post('http://localhost:{}/api/v0.1/audio'.format(port),
-                      files=dict(audio=open(fpath, 'rb')))
+        resp = requests.post('http://localhost:{}/api/v0.1/audio'.format(port),
+                             files=dict(audio=open(fpath, 'rb')))
+
+        # Build a task over it
+        requests.post(
+            'http://localhost:{}/api/v0.1/task'.format(port),
+            json=dict(uri=resp.json()['uri'],
+                      taxonomy='instrument_taxonomy_v0',
+                      feedback='none', visualization='waveform'))
     kill(server)
 
     # Run the two servers

@@ -28,7 +28,29 @@ APPEND = 'a'
 READ = 'r'
 
 
-class LocalClient():
+class QueryResult(object):
+
+    def __init__(self, db, key_gen):
+        self.key_gen = key_gen
+        self.db = db
+        self._keys_only = False
+
+    def filter_keys(self):
+        self._keys_only = True
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        for key in self.key_gen:
+            if self._keys_only:
+                return key
+            else:
+                # TODO: Check that this maintains parity with DataStore
+                return self.db.get(key)
+
+
+class LocalClient(object):
     """A "local" JSON backed database object.
 
     TODO: Can / could use a slightly smarter backend to easily mimic the
@@ -129,6 +151,14 @@ class LocalClient():
         for uri in self._collection.keys():
             if kind is None or kind == urilib.split(uri)[0]:
                 yield uri
+
+    def query(self, filter=None):
+        key_gen = self.uris()
+        if filter:
+            name, value = filter
+            if name == 'kind':
+                key_gen = self.uris(kind=value)
+        return QueryResult(self, key_gen)
 
 
 class GClient(object):

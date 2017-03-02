@@ -11,10 +11,8 @@ Example
 b"hello darkness my old friend"
 """
 from google.cloud import storage
-import io
 import logging
 import os
-import warnings
 
 from . import GCLOUD, LOCAL
 

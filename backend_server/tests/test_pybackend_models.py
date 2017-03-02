@@ -31,3 +31,33 @@ def test_DummyRecord_expand():
     rec = DummyRecord.from_flat(**{'a': aflat, 'b': b})
     assert rec['a'] == a
     assert rec['b'] == b
+
+
+def test_AnnotationResponse_template():
+    annot = M.AnnotationResponse.template(
+        user_id="spotify:user:rockstr123",
+        task_uri='task:abc123',
+        request_uri='request:xyz123',
+        response=dict(labels=['a', 'b']))
+    assert annot is not None
+    assert 'created' in annot
+
+
+def test_Task_template():
+    annot = M.Task.template(
+        audio_uri='audio:123',
+        source=dict(uri='audio:345', time=0.0, duration=10.0),
+        taxonomy='instrument_taxonomy_v0', feedback='none',
+        visualization='waveform')
+    assert annot is not None
+    for k in ['created', 'priority', 'payload']:
+        assert k in annot
+
+
+def test_TaskRequest_template():
+    annot = M.TaskRequest.template(
+        user_id="spotify:user:rockstr123",
+        task_uri='task:abc123',
+        expires=300)
+    assert annot is not None
+    assert annot['expires'] > annot['created']

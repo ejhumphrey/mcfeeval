@@ -25,7 +25,11 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+<<<<<<< HEAD
+.config*.yaml
+=======
 .config*yaml
+>>>>>>> ebb4612ff5a6c6f7b6fbc908d837857f8377d95a
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
